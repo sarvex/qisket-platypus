@@ -94,7 +94,7 @@ def handle_inline_latex(line):
         if in_latex:
             text = text.replace(r"\{", r"\\{")
             text = text.replace(r"\}", r"\\}")
-        newline += text + "$"
+        newline += f"{text}$"
         in_latex = not in_latex
     return newline[:-1]
 
@@ -109,10 +109,7 @@ def handle_block_comment(comment_syntax):
     ::: block content
     """
     match = comment_regex.search(comment_syntax.lstrip())
-    if match is not None:
-        return match.group(1)
-    else:
-        return comment_syntax
+    return match.group(1) if match is not None else comment_syntax
 
 
 def handle_vue_component(vue_component_syntax):
@@ -196,10 +193,7 @@ def handle_hero_image(hero_image_syntax):
     > hero: path/image
     """
     match = hero_regex.search(hero_image_syntax.lstrip())
-    if match is not None:
-        return f"> hero: {match.group(1)}"
-    else:
-        return hero_image_syntax
+    return f"> hero: {match.group(1)}" if match is not None else hero_image_syntax
 
 
 def handle_heading(heading_syntax, in_block, suffix, section, is_problem_set=False):
@@ -209,36 +203,35 @@ def handle_heading(heading_syntax, in_block, suffix, section, is_problem_set=Fal
     level = header.count("#")
     if in_block:
         return None, None, title, f"#{heading_syntax}\n"
-    else:
-        match = tag_id_regex.search(heading_syntax)
-        if match is None:
-            id = section if section else re.sub(r"\s", "-", title.strip().lower())
-            id = re.sub(r"[^\w-]", "", id)
-            if level == 1:
-                # Mathigon requires all sections to start with `##`
-                text = heading_syntax if is_problem_set else f"#{heading_syntax}\n"
-            elif "-0-0" in suffix:
-                # Mathigon requires all sections to start with `##`
-                text = f'## {heading_syntax.split(" ", 1)[-1]}\n'
-            elif level == 2 and is_problem_set:
-                id = re.sub(r"\s", "-", heading_syntax.split(" ", 1)[-1].strip().lower())
-                text = f'\n---\n\n> section: {id}\n\n## {heading_syntax.split(" ", 1)[-1]}\n'
-            else:
-                id = id.split("-", 1)[0][:25] + suffix
-                text = f'<h{level}>{title} <a id="{id}"></a>\n</h{level}>\n'
-            return id, level, title.strip(), text
+    match = tag_id_regex.search(heading_syntax)
+    if match is None:
+        id = section if section else re.sub(r"\s", "-", title.strip().lower())
+        id = re.sub(r"[^\w-]", "", id)
+        if level == 1:
+            # Mathigon requires all sections to start with `##`
+            text = heading_syntax if is_problem_set else f"#{heading_syntax}\n"
+        elif "-0-0" in suffix:
+            # Mathigon requires all sections to start with `##`
+            text = f'## {heading_syntax.split(" ", 1)[-1]}\n'
+        elif level == 2 and is_problem_set:
+            id = re.sub(r"\s", "-", heading_syntax.split(" ", 1)[-1].strip().lower())
+            text = f'\n---\n\n> section: {id}\n\n## {heading_syntax.split(" ", 1)[-1]}\n'
         else:
-            title = heading_syntax[0 : match.start()].split(" ", 1)[-1].strip()
-            id = match.group(2)
-            if level == 1:
-                # Mathigon requires all sections to start with `##`
-                text = f"#{heading_syntax}\n"
-            elif "-0-0" in suffix:
-                # Mathigon requires all sections to start with `##`
-                text = f'## {heading_syntax.split(" ", 1)[-1]}\n'
-            else:
-                text = f"<h{level}>{heading_syntax[level:]}\n</h{level}>\n"
-            return id, level, title, text
+            id = id.split("-", 1)[0][:25] + suffix
+            text = f'<h{level}>{title} <a id="{id}"></a>\n</h{level}>\n'
+        return id, level, title.strip(), text
+    else:
+        title = heading_syntax[:match.start()].split(" ", 1)[-1].strip()
+        id = match.group(2)
+        if level == 1:
+            # Mathigon requires all sections to start with `##`
+            text = f"#{heading_syntax}\n"
+        elif "-0-0" in suffix:
+            # Mathigon requires all sections to start with `##`
+            text = f'## {heading_syntax.split(" ", 1)[-1]}\n'
+        else:
+            text = f"<h{level}>{heading_syntax[level:]}\n</h{level}>\n"
+        return id, level, title, text
 
 
 def handle_markdown_cell(cell, resources, cell_number, is_problem_set=False):
@@ -255,12 +248,10 @@ def handle_markdown_cell(cell, resources, cell_number, is_problem_set=False):
         if in_latex:
             if line.rstrip(" .").endswith("$$"):
                 l = line.replace("$$", "")
-                markdown_lines.append(f"{l}\n" if len(l) else l)
-                markdown_lines.append(f"{indent}```\n")
+                markdown_lines.extend((f"{l}\n" if len(l) else l, f"{indent}```\n"))
                 in_latex = False
             else:
-                markdown_lines.append(line)
-                markdown_lines.append("\n")
+                markdown_lines.extend((line, "\n"))
                 in_latex = True
             continue
         if line.lstrip(' >').startswith("$$"):
@@ -270,8 +261,7 @@ def handle_markdown_cell(cell, resources, cell_number, is_problem_set=False):
             markdown_lines.append(f"{indent}```latex\n")
             if l.rstrip(" .").endswith("$$"):
                 l = l.replace("$$", "")
-                markdown_lines.append(f"{indent}{l}\n" if len(l) else l)
-                markdown_lines.append(f"{indent}```\n")
+                markdown_lines.extend((f"{indent}{l}\n" if len(l) else l, f"{indent}```\n"))
                 in_latex = False
             else:
                 markdown_lines.append(f"{indent}{l}\n" if len(l) else l)
@@ -281,9 +271,7 @@ def handle_markdown_cell(cell, resources, cell_number, is_problem_set=False):
         if in_code:
             if line.lstrip().startswith(CODE_BLOCK_START):
                 in_code = False
-                markdown_lines.append(line + "\n")
-            else:
-                markdown_lines.append(line + "\n")
+            markdown_lines.append(line + "\n")
             continue
         elif line.lstrip().startswith(CODE_BLOCK_START):
             in_code = True
@@ -293,8 +281,8 @@ def handle_markdown_cell(cell, resources, cell_number, is_problem_set=False):
                 markdown_lines.append(line + "\n")
             continue
 
-        if in_blockquote:
-            if not line.startswith(">") and not in_latex:
+        if not line.startswith(">") and not in_latex:
+            if in_blockquote:
                 in_blockquote = False
                 markdown_lines.append("</blockquote>\n")
         if line.startswith(">"):
@@ -334,11 +322,7 @@ def handle_markdown_cell(cell, resources, cell_number, is_problem_set=False):
             line = handle_inline_latex(line)
             line = handle_inline_code(line)
             line = handle_inline_images(line)
-            markdown_lines.append(
-                line.replace("\\%", "\\\\%")
-            )  # .replace('$$', '$').replace('\\', '\\\\'))
-            markdown_lines.append("\n")
-
+            markdown_lines.extend((line.replace("\\%", "\\\\%"), "\n"))
     markdown_lines.append("\n")
     updated_lines = "".join(markdown_lines)
     return updated_lines, resources, headings
@@ -489,21 +473,21 @@ def handle_cell_goals(id, cell, resources={}):
 
     if "goals" in cell.metadata and cell.metadata["goals"]:
         goals_meta = cell.metadata["goals"]
-        actions = [f"export function {id}($section: Step) {{ "]
-        actions.append("  setTimeout(() => {")
-
+        actions = [f"export function {id}($section: Step) {{ ", "  setTimeout(() => {"]
         for count, goal in enumerate(goals_meta):
             if "click" in goal:
                 actions.append(
                     JS_CLICK_GOAL.format(
-                        elt="elt" + str(count), selector=goal["selector"], id=goal["id"]
+                        elt=f"elt{str(count)}",
+                        selector=goal["selector"],
+                        id=goal["id"],
                     )
                 )
 
             if "value" in goal:
                 actions.append(
                     JS_VALUE_GOAL.format(
-                        elt="elt" + str(count),
+                        elt=f"elt{str(count)}",
                         selector=goal["selector"],
                         id=goal["id"],
                         value=goal["value"],
@@ -512,9 +496,7 @@ def handle_cell_goals(id, cell, resources={}):
 
             goals.add(goal["id"])
 
-        actions.append("  }, 250);")
-        actions.append("}\n")
-
+        actions.extend(("  }, 250);", "}\n"))
         if "textbook" not in resources:
             resources["textbook"] = {}
         if "functions" not in resources["textbook"]:
@@ -536,7 +518,7 @@ def handle_index(headers, resources={}):
             continue
         if not top_section:
             top_section = id
-        elif level <= last_level or len(index) == 0:
+        elif level <= last_level or not index:
             index.append({"id": id, "title": title, "subsections": []})
             last_level = level
         else:
@@ -586,8 +568,12 @@ class TextbookExporter(Exporter):
                 if not len(blanks):
                     goals, resources = handle_cell_goals(id, cell, resources)
                     if goals:
-                        markdown_lines.append(f"\n---\n> id: {id}")
-                        markdown_lines.append(f'\n> goals: {" ".join(goals)}\n\n')
+                        markdown_lines.extend(
+                            (
+                                f"\n---\n> id: {id}",
+                                f'\n> goals: {" ".join(goals)}\n\n',
+                            )
+                        )
                 else:
                     markdown_lines.append(f"\n---\n> id: {id}\n\n")
 
@@ -608,8 +594,9 @@ class TextbookExporter(Exporter):
                     continue
                 goals, resources = handle_cell_goals(id, cell, resources)
                 if goals:
-                    markdown_lines.append(f"\n---\n> id: {id}")
-                    markdown_lines.append(f'\n> goals: {" ".join(goals)}\n\n')
+                    markdown_lines.extend(
+                        (f"\n---\n> id: {id}", f'\n> goals: {" ".join(goals)}\n\n')
+                    )
                 code_output, resources = handle_code_cell(cell, resources)
                 markdown_lines.append(code_output)
 

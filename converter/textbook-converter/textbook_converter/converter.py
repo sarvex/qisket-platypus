@@ -14,8 +14,7 @@ def get_notebook_node(nb_file_path):
     """Return a NotebookNode object from the given notebook file.
     """
     try:
-        notebook_node = nbformat.read(nb_file_path, nbformat.NO_CONVERT)
-        return notebook_node
+        return nbformat.read(nb_file_path, nbformat.NO_CONVERT)
     except Exception as err:
         print(f'Error reading notebook: {err}')
 
@@ -141,14 +140,12 @@ def convert_notebook_file(
     if not nb_path.exists():
         print(f'{nb_path} not found')
         return None
-    
+
     if not nb_path.is_file():
         print(f'{nb_path} is not a file')
         return None
 
-    nb_node = get_notebook_node(str(nb_path))
-
-    if nb_node:
+    if nb_node := get_notebook_node(str(nb_path)):
         file_name = nb_path.stem
         output_path = output_dir if output_dir else str(nb_path.parent)
         shared_path = shared_dir if shared_dir else os.path.join(output_path, 'shared')

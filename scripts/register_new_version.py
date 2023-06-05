@@ -36,11 +36,7 @@ def write_toc(toc, filepath):
         new_toc.write(yaml.dump(toc))
 
 def get_available_translations(translations_path):
-    translations = []
-    for file in os.scandir(translations_path):
-        if file.is_dir():
-            translations.append(file)
-    return translations
+    return [file for file in os.scandir(translations_path) if file.is_dir()]
 
 
 if __name__ == '__main__':
@@ -53,7 +49,7 @@ if __name__ == '__main__':
     available_translations = get_available_translations(f'notebooks/{version_name}/translations')
 
     for language in available_translations:
-        if not os.path.exists(language.path + '/toc.yaml'):
+        if not os.path.exists(f'{language.path}/toc.yaml'):
             print(f"Skipping {language.name} (no toc.yaml)")
             continue
         # copy files over
