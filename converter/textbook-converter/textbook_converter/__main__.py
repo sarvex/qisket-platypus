@@ -36,11 +36,11 @@ for chapter in toc_chapters:
         for section in chapter['sections']:
             section_url = section['url'][1:] if section['url'].startswith('/') else section['url']
             convert(
-                os.path.join(nb_dir_path, section_url) + '.ipynb',
+                f'{os.path.join(nb_dir_path, section_url)}.ipynb',
                 output_dir=chapter_output,
                 shared_dir=shared_dir,
                 section_id=section['id'],
-                is_problem_set=is_problem_set
+                is_problem_set=is_problem_set,
             )
             if is_problem_set:
                 standalone(chapter_output, section)
